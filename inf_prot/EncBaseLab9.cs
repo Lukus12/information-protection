@@ -21,9 +21,23 @@ namespace inf_prot
         public EncBaseLab9(string containerText)
         {
             // Делим контейнер на строки
-            containerStrings = containerText.Split('\n').ToList();
+            containerStrings = containerText.Split("\r\n").ToList();
+
+            // Удаляем пробелы с конца строки
+            for (var i = 0; i < containerStrings.Count; i++)
+            {
+                for (var j = containerStrings[i].Length - 1; j >= 0; j--)
+                {
+                    if (containerStrings[i][j] != ' ')
+                    {
+                        containerStrings[i] = containerStrings[i].Substring(0, j + 1);
+                        break;
+                    }
+                }
+            }
 
             maxBitsCount = containerStrings.Count * 2;
+
         }
 
         /// <summary>

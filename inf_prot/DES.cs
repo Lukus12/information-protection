@@ -1,6 +1,7 @@
-﻿using System.Text.Json;
-using System.Text.RegularExpressions;
+﻿using inf_prot;
 using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace inf_prot
 {
@@ -11,25 +12,18 @@ namespace inf_prot
     {
         // Ключ K
         protected string key;
-
         // Преобразования ключа
         private List<string> transformedKeys;
-
         // Матрица начальной перестановки IP
         protected List<int> initialPermutationIP;
-
         // Матрица конечной перестановки IP^-1
         protected List<int> inversePermutationIP;
-
         // Функция расширения E
         private List<int> extensionFuncE;
-
         // Матрица G первоначальной подготовки ключа
         private List<int> keyStartPreparationG;
-
         // Таблица сдвигов для вычисления ключа
         private List<int> keyShift = new List<int>() { 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
-
         // Матрица H завершающей обработки ключа
         private List<int> keyEndPreparationH = new List<int>()
         {
@@ -42,7 +36,6 @@ namespace inf_prot
             43, 48, 38, 55, 33, 52,
             45, 41, 49, 35, 28, 31
         };
-
         // Функции преобразования S1, S2, ..., S8
         private List<List<int>> transformFuncS = new List<List<int>>()
         {
@@ -95,7 +88,6 @@ namespace inf_prot
                   2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11 ]
             }
         };
-
         // Функция перестановки P
         private List<int> permutationFuncP = new List<int>() {
             15, 6, 19, 20,
@@ -107,7 +99,6 @@ namespace inf_prot
             18, 12, 29, 5,
             21, 10, 3, 24
         };
-
         /// <summary>
         /// Конструктор
         /// </summary>
@@ -117,11 +108,9 @@ namespace inf_prot
             // Инициализация таблицы начальных перестановок
             initialPermutationIP = new List<int>();
             var initializeHelper = new List<int>() { 57, 59, 61, 63, 56, 58, 60, 62 };
-
             foreach (var num in initializeHelper)
             {
                 initialPermutationIP.Add(num);
-
                 var temp = initialPermutationIP[^1] - 8;
                 while (temp >= 0)
                 {
@@ -129,75 +118,58 @@ namespace inf_prot
                     temp -= 8;
                 }
             }
-
             // Инициализация таблицы начальных перестановок
             inversePermutationIP = new List<int>();
             initializeHelper = new List<int>() { 39, 7, 47, 15, 55, 23, 63, 31 };
-
             for (var i = 0; i < 64; i++)
                 inversePermutationIP.Add(0);
-
             var index = 0;
             foreach (var num in initializeHelper)
             {
                 inversePermutationIP[index] = initializeHelper[index];
-
                 var prevVal = inversePermutationIP[index];
                 for (var i = index + 8; i < index + 8 * 8; i += 8)
                 {
                     inversePermutationIP[i] = --prevVal;
                     prevVal = inversePermutationIP[i];
                 }
-
                 index++;
             }
-
             // Инициализация функции расширения E
             extensionFuncE = new List<int>() { 31, 0 };
-
             var stepsForRepeat = 4;
             for (var i = 1; i < 32; i++)
             {
                 extensionFuncE.Add(i);
                 stepsForRepeat--;
-
                 if (stepsForRepeat == 0)
                 {
                     stepsForRepeat = 5;
                     i -= 1;
-
                     extensionFuncE.Add(i);
                 }
             }
-
             extensionFuncE.Add(0);
-
             // Инициализация матрицы первоначальной подготовки ключа
             keyStartPreparationG = new List<int>();
             initializeHelper = new List<int>() { 56, 57, 58, 59, 62, 61, 60, 27 };
-
             foreach (var num in initializeHelper)
             {
                 keyStartPreparationG.Add(num);
-
                 var temp = keyStartPreparationG[^1] - 8;
                 while (temp >= 0 && keyStartPreparationG.Count < 56)
                 {
                     keyStartPreparationG.Add(temp);
                     if (temp == 35)
                         break;
-
                     temp -= 8;
                 }
             }
-
             // Инициализация ключа K
             this.key = CreateKey(key);
             KeyPrep(key.Replace(" ", ""));
-
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
-
         /// <summary>
         /// Получить битовые отрезки
         /// </summary>
@@ -207,7 +179,6 @@ namespace inf_prot
         {
             // Получить массив байт из исходной строки
             byte[] bytes = Encoding.GetEncoding(1251).GetBytes(msg);
-
             // Получить битовую строку и нормализировать её
             var bitArray = new List<char>();
             foreach (var _byte in bytes)
@@ -217,15 +188,27 @@ namespace inf_prot
                     tempBits.Insert(0, '0');
                 bitArray.AddRange(tempBits);
             }
-
+            // Проверка на лишние нулевые биты вначале
+            var test = bitArray.GetRange(0, bitArray.Count % bitsCount);
+            var findOneBit = false;
+            foreach (var bit in test)
+            {
+                if (bit == '1')
+                {
+                    findOneBit = true;
+                    break;
+                }
+            }
+            if (!findOneBit)
+            {
+                bitArray = bitArray.GetRange(test.Count, bitArray.Count - test.Count);
+            }
             while (bitArray.Count % bitsCount != 0)
                 bitArray.Insert(0, '0');
-
             // Вернуть отрезки
             for (var i = 0; i < bitArray.Count; i += bitsCount)
                 yield return bitArray.GetRange(i, bitsCount);
         }
-
         /// <summary>
         /// Алгоритм шифрования и расшифрования сообщений
         /// </summary>
@@ -236,16 +219,13 @@ namespace inf_prot
         protected virtual string EncDecProcess(List<char> bitArray, bool isEncrypt, bool resultInBits)
         {
             //Debug.WriteLine("Вход: " + string.Join("", bitArray.ToArray()) + '\n');
-
             // Если шифрование, то начальная перестановка
             // Если дешифрование, то обратная конечная перестановка
             var matrix = isEncrypt ? initialPermutationIP : inversePermutationIP;
             var permutatedBits = new List<char>();
             for (var i = 0; i < matrix.Count; i++)
                 permutatedBits.Add(bitArray[isEncrypt ? matrix[i] : matrix.IndexOf(i)]);
-
             //Debug.WriteLine("Перемешивание: " + string.Join("", permutatedBits.ToArray()) + '\n');
-
             // Шифрующие преобразования
             // Если шифрование, то начинаем с ключа 1
             // Если дешифрование, то начинаем с ключа 16
@@ -253,32 +233,25 @@ namespace inf_prot
             while (keyNum < 16 && keyNum >= 0)
             {
                 permutatedBits = BitsTransform(permutatedBits.GetRange(0, 32), permutatedBits.GetRange(32, 32), keyNum, isEncrypt);
-
                 if (isEncrypt)
                     keyNum++;
                 else
                     keyNum--;
             }
-
             //Debug.WriteLine("Преобразование: " + string.Join("", permutatedBits.ToArray()) + '\n');
-
             // Если шифрование, то конечная перестановка
             // Если дешифрование, то обратная начальная перестановка
             var tempBits = permutatedBits.ToList();
             matrix = isEncrypt ? inversePermutationIP : initialPermutationIP;
             for (var i = 0; i < matrix.Count; i++)
                 permutatedBits[i] = tempBits[isEncrypt ? matrix[i] : matrix.IndexOf(i)];
-
             //Debug.WriteLine("Перемешивание: " + string.Join("", permutatedBits.ToArray()) + '\n');
-
             var bitStr = new StringBuilder(); // Строка бит
-
             if (resultInBits)
             {
                 // Возвращаем результат в виде строки бит
                 foreach (var bit in permutatedBits)
                     bitStr.Append(bit);
-
                 return bitStr.ToString();
             }
             else
@@ -289,20 +262,15 @@ namespace inf_prot
                 {
                     foreach (var bit in permutatedBits.GetRange(8 * i, 8))
                         bitStr.Append(bit);
-
                     var symbol = Convert.ToInt32(bitStr.ToString(), 2);
                     bytes[i] = (byte)symbol;
-
                     bitStr.Clear();
                 }
-
                 //Debug.WriteLine("Байты: " + string.Join(", ", bytes.ToArray()) + '\n');
-
                 // Получаем сообщение
                 return Encoding.GetEncoding(1251).GetString(bytes);
             }
         }
-
         /// <summary>
         /// Шифрующие преобразования
         /// </summary>
@@ -315,7 +283,6 @@ namespace inf_prot
         {
             // Подготовка ключа
             var newKey = transformedKeys[step];
-
             // Расширение битов
             // Если шифрование, то bitsR
             // Если дешифрование, то bitsL
@@ -323,38 +290,31 @@ namespace inf_prot
             var extensionBits = new List<char>();
             for (var i = 0; i < extensionFuncE.Count; i++)
                 extensionBits.Add(bitsToExtension[extensionFuncE[i]]);
-
             // Сложение по модулю 2 с ключом
             for (var i = 0; i < newKey.Length; i++)
                 extensionBits[i] = (extensionBits[i] ^ newKey[i]).ToString()[0];
-
             // S преобразование
             var transformedBits = "";
             for (var i = 0; i < 8; i++)
                 transformedBits += TranformFuncSHelper(extensionBits.GetRange(6 * i, 6), i);
-
             // Перестановка битов
             var permutatedBits = new List<char>();
             for (var i = 0; i < permutationFuncP.Count; i++)
                 permutatedBits.Add(transformedBits[permutationFuncP[i]]);
-
             // Вычисление новых битов
             // Если шифрование, то вычисление bitsR
             // Если дешифрование, то вычисление bitsL
             var newBits = new List<char>();
             for (var i = 0; i < permutatedBits.Count; i++)
                 newBits.Add((permutatedBits[i] ^ (isEncrypt ? bitsL[i] : bitsR[i])).ToString()[0]);
-
             // Формирование битовой комбинации
             var resultBits = isEncrypt ? bitsR : newBits;
             if (isEncrypt)
                 resultBits.AddRange(newBits);
             else
                 resultBits.AddRange(bitsL);
-
             return resultBits;
         }
-
         /// <summary>
         /// S преобразование
         /// </summary>
@@ -368,10 +328,8 @@ namespace inf_prot
             // Биты 1 - 4 определяют номер столбца (+ к сдвигу)
             var decimalNum = transformFuncS[step][16 * Convert.ToInt32(bits[0].ToString() + bits[5], 2) +
                     Convert.ToInt32(bits[1].ToString() + bits[2] + bits[3] + bits[4], 2)];
-
             return Convert.ToString(decimalNum, 2).PadLeft(4, '0');
         }
-
         /// <summary>
         /// Подготовка ключа
         /// </summary>
@@ -387,11 +345,9 @@ namespace inf_prot
             var newKey = new List<char>();
             for (var i = 0; i < keyStartPreparationG.Count; i++)
                 newKey.Add(binaryKey[keyStartPreparationG[i]]);
-
             var cKey = new List<char>();
             var dKey = new List<char>();
             transformedKeys = new List<string>();
-
             for (var i = 0; i < 16; i++)
             {
                 // Сдвиг влево
@@ -407,16 +363,13 @@ namespace inf_prot
                 }
                 var tempKey = new List<char>();
                 tempKey = [.. cKey, .. dKey];
-
                 // Конечная подготовка ключа
                 newKey = new List<char>();
                 for (var j = 0; j < keyEndPreparationH.Count; j++)
                     newKey.Add(tempKey[keyEndPreparationH[j]]);
-
                 transformedKeys.Add(new string(newKey.ToArray()));
             }
         }
-
         /// <summary>
         /// Сдвиг ключа
         /// </summary>
@@ -431,13 +384,10 @@ namespace inf_prot
                 var index = i + keyShift[step];
                 if (index >= tempKey.Count)
                     index = index - tempKey.Count;
-
                 bits[i] = tempKey[index];
             }
-
             return bits;
         }
-
         /// <summary>
         /// Создание ключа
         /// </summary>
@@ -446,10 +396,8 @@ namespace inf_prot
         protected virtual string CreateKey(string key)
         {
             var jsonKey = new Dictionary<string, string>() { { "key", key } };
-
             return JsonSerializer.Serialize(jsonKey, new JsonSerializerOptions() { WriteIndented = true });
         }
-
         /// <summary>
         /// Вернуть представление ключа в виде строки
         /// </summary>
@@ -458,7 +406,6 @@ namespace inf_prot
         {
             return key;
         }
-
         /// <summary>
         /// Задать ключ из json
         /// </summary>
@@ -466,12 +413,10 @@ namespace inf_prot
         public virtual void SetKey(string jsonKey)
         {
             var deserializedKey = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonKey);
-
             if (deserializedKey.ContainsKey("key"))
             {
                 var hexKey = deserializedKey["key"].Replace(" ", "");
                 var regex = new Regex(@"^[0-9A-F\r\n]+$");
-
                 if (hexKey.Length == 16 && regex.Match(hexKey).Success)
                 {
                     key = jsonKey;
@@ -479,19 +424,14 @@ namespace inf_prot
                 }
             }
         }
-
         // Заглушка, нужен оверрайд
         public virtual string Encrypt(string msg) { return string.Empty; }
-
         // Заглушка, нужен оверрайд
         public virtual string Decrypt(string enc) { return string.Empty; }
-
         // Заглушка, не нужно в текущей лабе
         public bool JsonEditorValidater(char ch) { return true; }
-
         // Заглушка, не нужно в текущей лабе
         public bool IsCharInDict(char ch) { return true; }
-
         // Заглушка, не нужно в текущей лабе
         public void GenerateKey() { }
     }

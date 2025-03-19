@@ -156,6 +156,7 @@
             Controls.Add(sourceMsgTextBox);
             Name = "MainWindow";
             Text = "Защита информации";
+            Load += MainWindow_Load;
             ResumeLayout(false);
             PerformLayout();
         }
